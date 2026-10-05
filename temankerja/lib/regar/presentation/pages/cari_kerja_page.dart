@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../fajar/core/constant/app_colors.dart';
+import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
+import 'package:inovasi_sumut/regar/data/models/job_model.dart';
+import 'package:inovasi_sumut/regar/data/repositories/job_repository.dart';
+import 'package:inovasi_sumut/regar/data/repositories/worker_repository.dart';
+import 'package:inovasi_sumut/regar/presentation/pages/detail_kerja_page.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/jobs/category_chips.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/jobs/job_card.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/jobs/job_search_bar.dart';
 
+/// Daftar semua lowongan + pencarian + filter.
 class CariKerjaPage extends StatefulWidget {
   const CariKerjaPage({super.key});
 
@@ -9,248 +17,226 @@ class CariKerjaPage extends StatefulWidget {
 }
 
 class _CariKerjaPageState extends State<CariKerjaPage> {
-  final TextEditingController _searchController = TextEditingController();
+  static const String _semua = 'Semua';
 
-  // Data Dummy Lowongan Kerja
-  final List<Map<String, String>> _jobList = const [
-    {
-      'title': 'Teknisi AC & Listrik',
-      'company': 'Servis Mandiri Medan',
-      'location': 'Medan Kota',
-      'salary': 'Rp 150rb - 250rb / hari',
-      'type': 'Harian',
-      'category': 'Jasa',
-    },
-    {
-      'title': 'Staf Kasir & Admin',
-      'company': 'Toko Sembako Berkah',
-      'location': 'Medan Helvetia',
-      'salary': 'Rp 2.500.000 / bulan',
-      'type': 'Full Time',
-      'category': 'Ritel',
-    },
-    {
-      'title': 'Driver Operasional',
-      'company': 'CV Distribusi Utama',
-      'location': 'Medan Amplas',
-      'salary': 'Rp 3.000.000 / bulan',
-      'type': 'Full Time',
-      'category': 'Logistik',
-    },
-    {
-      'title': 'Desainer Grafis Freelance',
-      'company': 'Studio Kreatif Medan',
-      'location': 'Medan Selayang',
-      'salary': 'Rp 500rb / proyek',
-      'type': 'Freelance',
-      'category': 'Kreatif',
-    },
-  ];
+  final TextEditingController _search = TextEditingController();
+
+  List<JobModel> _jobs = [];
+  String _category = _semua;
+  JobType? _type;
+  String _query = '';
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final jobs = await jobRepository.getJobs();
+      if (!mounted) return;
+      setState(() {
+        _jobs = jobs;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Gagal memuat lowongan. Coba lagi.';
+        _loading = false;
+      });
+    }
+  }
+
+  List<String> get _categories => [
+        _semua,
+        ...{for (final j in _jobs) j.category},
+      ];
+
+  List<JobModel> get _filtered {
+    final q = _query.trim().toLowerCase();
+    return _jobs.where((j) {
+      final okCategory = _category == _semua || j.category == _category;
+      final okType = _type == null || j.type == _type;
+      final okQuery = q.isEmpty ||
+          j.title.toLowerCase().contains(q) ||
+          j.company.toLowerCase().contains(q) ||
+          j.location.toLowerCase().contains(q) ||
+          j.category.toLowerCase().contains(q);
+      return okCategory && okType && okQuery;
+    }).toList();
+  }
+
+  void _openTypeFilter() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: KkColors.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Jenis Pekerjaan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: KkColors.text,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Semua'),
+                    selected: _type == null,
+                    selectedColor: KkColors.goldBg,
+                    onSelected: (_) {
+                      setState(() => _type = null);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                  for (final t in JobType.values)
+                    ChoiceChip(
+                      label: Text(t.label),
+                      selected: _type == t,
+                      selectedColor: KkColors.goldBg,
+                      onSelected: (_) {
+                        setState(() => _type = t);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: KkColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
-          onPressed: () => Navigator.pop(context),
-        ),
+        backgroundColor: KkColors.bg,
+        elevation: 0,
+        leading: const BackButton(color: KkColors.text),
         title: const Text(
-          'Cari Pekerjaan',
+          'Cari Kerja',
           style: TextStyle(
-            color: AppColors.textDark,
+            color: KkColors.text,
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Bar & Filter Button
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Cari posisi, skill, atau lokasi...',
-                        hintStyle: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                        icon: Icon(Icons.search, color: AppColors.textMuted),
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.medanGreen,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune, color: Colors.white),
-                    onPressed: () {
-                      // Action Filter
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Section Info Total Lowongan
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Baris 122 diperbaiki
-              children: [
-                Text(
-                  '${_jobList.length} Lowongan Tersedia',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const Text(
-                  'Urutkan: Terbaru',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
+            JobSearchBar(
+              controller: _search,
+              onChanged: (v) => setState(() => _query = v),
+              onFilterTap: _openTypeFilter,
+              filterActive: _type != null,
             ),
             const SizedBox(height: 12),
-
-            // Daftar Lowongan Pekerjaan
-            Expanded(
-              child: ListView.builder(
-                itemCount: _jobList.length,
-                physics: const BouncingScrollPhysics(),
-                itemBuilder: (context, index) {
-                  final job = _jobList[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Baris 162 diperbaiki
-                          children: [
-                            Expanded(
-                              child: Text(
-                                job['title']!,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                job['type']!,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue.shade700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          job['company']!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
-                            const SizedBox(width: 4),
-                            Text(
-                              job['location']!,
-                              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-                            ),
-                            const SizedBox(width: 16),
-                            const Icon(Icons.payments_outlined, size: 14, color: AppColors.medanGreen),
-                            const SizedBox(width: 4),
-                            Text(
-                              job['salary']!,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.medanGreen,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Lamar pekerjaan: ${job['title']}')),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.medanGreen,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Lamar Sekarang',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+            if (!_loading && _error == null) ...[
+              CategoryChips(
+                categories: _categories,
+                selected: _category,
+                onSelected: (c) => setState(() => _category = c),
               ),
+              const SizedBox(height: 12),
+              Text(
+                'Ditemukan ${_filtered.length} lowongan',
+                style: const TextStyle(fontSize: 12, color: KkColors.muted),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: KkColors.green),
+      );
+    }
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 48, color: KkColors.muted),
+            const SizedBox(height: 8),
+            Text(_error!, style: const TextStyle(color: KkColors.muted)),
+            const SizedBox(height: 12),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: KkColors.green),
+              onPressed: _load,
+              child: const Text('Coba Lagi'),
             ),
           ],
+        ),
+      );
+    }
+    final items = _filtered;
+    if (items.isEmpty) {
+      return const Center(
+        child: Text(
+          'Tidak ada lowongan yang cocok.\nCoba kata kunci atau filter lain.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: KkColors.muted),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      color: KkColors.green,
+      onRefresh: _load,
+      child: ListenableBuilder(
+        listenable: workerRepository,
+        builder: (context, _) => ListView.builder(
+          itemCount: items.length,
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemBuilder: (context, i) {
+            final job = items[i];
+            return JobCard(
+              job: job,
+              applied: workerRepository.isApplied(job.id),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DetailKerjaPage(job: job)),
+              ),
+            );
+          },
         ),
       ),
     );

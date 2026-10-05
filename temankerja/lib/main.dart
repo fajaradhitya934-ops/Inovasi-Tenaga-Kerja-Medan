@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-// Import halaman dashboard & offer job
-import 'fajar/presentation/pages/dashboard/dashboard_page.dart';
+import 'package:inovasi_sumut/app/app_shell.dart';
+import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,10 +15,19 @@ class MyApp extends StatelessWidget {
       title: 'MEDAN TALENTA',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.green,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: KkColors.green),
+        scaffoldBackgroundColor: KkColors.bg,
         fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: KkColors.bg,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
+        snackBarTheme:
+            const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       ),
-      home: const DashboardPage(),
+      home: const AppShell(),
     );
   }
 }
