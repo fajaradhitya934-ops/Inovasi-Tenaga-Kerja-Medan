@@ -10,7 +10,7 @@ import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
 import 'package:inovasi_sumut/regar/core/utils/formatter.dart';
 
 // Page & Repositories
-import 'package:inovasi_sumut/regar/presentation/pages/tukar_skill_page.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/swap/tukar_skill_page.dart';
 import 'package:inovasi_sumut/regar/data/models/job_model.dart';
 import 'package:inovasi_sumut/regar/data/repositories/worker_repository.dart';
 import 'package:inovasi_sumut/regar/presentation/pages/cari_kerja_page.dart';

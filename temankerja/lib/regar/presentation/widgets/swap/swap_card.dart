@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
-import 'package:inovasi_sumut/regar/data/models/swap_model.dart';
-import 'package:inovasi_sumut/regar/data/repositories/swap_repository.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/swap/swap_model.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/swap/swap_repository.dart';
 import 'package:inovasi_sumut/regar/presentation/widgets/common/kk_widgets.dart';
 
 class SwapCard extends StatelessWidget {

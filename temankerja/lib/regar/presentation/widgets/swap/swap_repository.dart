@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:inovasi_sumut/regar/data/models/swap_model.dart';
+import 'package:inovasi_sumut/regar/presentation/widgets/swap/swap_model.dart';
 
 /// Semua urusan Firestore untuk fitur Tukar Skill ada di sini.
 class SwapRepository {
