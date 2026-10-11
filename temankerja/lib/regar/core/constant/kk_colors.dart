@@ -19,4 +19,6 @@ class KkColors {
   static const Color blueSoft = Color(0xFFE3EEFB);
   static const Color text = Color(0xFF1F2D24);
   static const Color muted = Color(0xFF6B7280);
+  static const Color purple = Color(0xFF7B3FA0);
+  static const Color purpleSoft = Color(0xFFEADCF5);
 }

@@ -10,6 +10,7 @@ import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
 import 'package:inovasi_sumut/regar/core/utils/formatter.dart';
 
 // Page & Repositories
+import 'package:inovasi_sumut/regar/presentation/pages/tukar_skill_page.dart';
 import 'package:inovasi_sumut/regar/data/models/job_model.dart';
 import 'package:inovasi_sumut/regar/data/repositories/worker_repository.dart';
 import 'package:inovasi_sumut/regar/presentation/pages/cari_kerja_page.dart';
@@ -235,8 +236,7 @@ class HomePage extends StatelessWidget {
                         subtitle: 'Barter keahlian tanpa uang',
                         bg: const Color(0xFFEADCF5),
                         fg: const Color(0xFF7B3FA0),
-                        badge: 'Segera',
-                        onTap: () => _soon(context, 'Tukar Skill'),
+                        onTap: () => _open(context, const TukarSkillPage()),
                       ),
                     ),
                   ],
@@ -261,8 +261,10 @@ class HomePage extends StatelessWidget {
                     final appliedJobs = allDocs.where((doc) {
                       final data = doc.data();
                       final postedByUid = data['postedByUid']?.toString() ?? '';
-                      final applicantUid = data['applicantUid']?.toString() ?? '';
-                      final status = (data['status'] ?? 'open').toString().toLowerCase();
+                      final applicantUid =
+                          data['applicantUid']?.toString() ?? '';
+                      final status =
+                          (data['status'] ?? 'open').toString().toLowerCase();
 
                       final bool hasApplicant = applicantUid.isNotEmpty;
                       final bool isPendingStatus = status == 'open' ||
@@ -380,11 +382,13 @@ class HomePage extends StatelessWidget {
                   final String location =
                       projectData['location'] ?? 'PB SELAYANG 1';
                   final double collectedAmount =
-                      (projectData['collectedAmount'] as num?)?.toDouble() ?? 0.0;
+                      (projectData['collectedAmount'] as num?)?.toDouble() ??
+                          0.0;
                   final double targetAmount =
                       (projectData['targetAmount'] as num?)?.toDouble() ?? 0.0;
                   final double physicalProgress =
-                      (projectData['physicalProgress'] as num?)?.toDouble() ?? 0.0;
+                      (projectData['physicalProgress'] as num?)?.toDouble() ??
+                          0.0;
 
                   final double financialProgress = targetAmount > 0
                       ? (collectedAmount / targetAmount).clamp(0.0, 1.0)
@@ -660,7 +664,8 @@ class _WorkerOffersBoxState extends State<_WorkerOffersBox> {
               decoration: InputDecoration(
                 hintText: 'Cari keahlian atau nama pekerja...',
                 hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search, size: 18, color: KkColors.muted),
+                prefixIcon:
+                    const Icon(Icons.search, size: 18, color: KkColors.muted),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? GestureDetector(
                         onTap: () {
@@ -669,7 +674,8 @@ class _WorkerOffersBoxState extends State<_WorkerOffersBox> {
                             _searchQuery = '';
                           });
                         },
-                        child: const Icon(Icons.clear, size: 16, color: KkColors.muted),
+                        child: const Icon(Icons.clear,
+                            size: 16, color: KkColors.muted),
                       )
                     : null,
                 border: InputBorder.none,
@@ -700,8 +706,10 @@ class _WorkerOffersBoxState extends State<_WorkerOffersBox> {
 
               final filteredDocs = docs.where((doc) {
                 final data = doc.data();
-                final postType = (data['postType'] ?? '').toString().toLowerCase();
-                final postMode = (data['postMode'] ?? '').toString().toLowerCase();
+                final postType =
+                    (data['postType'] ?? '').toString().toLowerCase();
+                final postMode =
+                    (data['postMode'] ?? '').toString().toLowerCase();
                 final postedByUid = data['postedByUid']?.toString() ?? '';
 
                 final bool isWorkerOffer = postType == 'worker' ||
@@ -714,9 +722,12 @@ class _WorkerOffersBoxState extends State<_WorkerOffersBox> {
                 if (_searchQuery.isEmpty) return true;
 
                 final title = (data['title'] ?? '').toString().toLowerCase();
-                final company = (data['company'] ?? '').toString().toLowerCase();
-                final category = (data['category'] ?? '').toString().toLowerCase();
-                final description = (data['description'] ?? '').toString().toLowerCase();
+                final company =
+                    (data['company'] ?? '').toString().toLowerCase();
+                final category =
+                    (data['category'] ?? '').toString().toLowerCase();
+                final description =
+                    (data['description'] ?? '').toString().toLowerCase();
 
                 return title.contains(_searchQuery) ||
                     company.contains(_searchQuery) ||
