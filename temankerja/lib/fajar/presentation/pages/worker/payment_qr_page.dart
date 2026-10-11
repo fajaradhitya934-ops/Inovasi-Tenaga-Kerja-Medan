@@ -1,91 +1,153 @@
 import 'package:flutter/material.dart';
-import '/fajar/core/constant/app_colors.dart';
+import '../../../core/constant/app_colors.dart';
 
-class PaymentQRPage extends StatelessWidget {
-  final double workerSalary;
-  final double appCost;
+class PaymentQrPage extends StatelessWidget {
+  final String jobId;
+  final String title;
+  final double amount;
+  final String proofUrl;
 
-  const PaymentQRPage({
-    Key? key,
-    this.workerSalary = 500000,
-    this.appCost = 10000,
-  }) : super(key: key);
+  const PaymentQrPage({
+    super.key,
+    required this.jobId,
+    required this.title,
+    required this.amount,
+    required this.proofUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
-    double totalPayment = workerSalary + appCost; // 510.000
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QR Tagihan Pembayaran', style: TextStyle(color: AppColors.textDark, fontSize: 16)),
+        title: const Text(
+          'QR Tagihan Pembayaran',
+          style: TextStyle(color: AppColors.textDark, fontSize: 16),
+        ),
         backgroundColor: Colors.white,
         elevation: 0.5,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const SizedBox(height: 10),
-            const Text(
-              'Tunjukkan QR ini ke Pemesan/Klien',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
             const SizedBox(height: 20),
-
-            // Container QR Code Placeholder
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ID Pekerjaan: $jobId',
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 24),
+            
+            // Tampilan QR Code (Placeholder / Dummy QR)
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
-                  BoxShadow(color: Colors.grey.shade200, blurRadius: 8, spreadRadius: 2),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: Column(
                 children: [
-                  // Gambar Placeholder QR Code
-                  Container(
-                    width: 200,
-                    height: 200,
-                    color: Colors.black12,
-                    child: const Icon(Icons.qr_code_2, size: 160, color: AppColors.textDark),
+                  Icon(
+                    Icons.qr_code_2,
+                    size: 200,
+                    color: Colors.grey.shade800,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Total Tagihan: Rp ${totalPayment.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.medanGreen),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Tunjukkan QR ini kepada Pemesan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Card Penjelasan Penahanan Dana (Escrow)
+            const SizedBox(height: 24),
+            
+            // Rincian Total Tagihan
             Container(
-              padding: const EdgeInsets.all(12),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: AppColors.medanGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.info_outline, color: Colors.blue),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Sesuai sistem, dana Rp ${totalPayment.toStringAsFixed(0)} akan masuk ke penampungan aplikasi dahulu. Setelah dikonfirmasi klien, Rp ${workerSalary.toStringAsFixed(0)} langsung cair ke dompet Anda.',
-                      style: const TextStyle(fontSize: 11, color: Colors.black87),
+                  const Text(
+                    'Total Tagihan:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  Text(
+                    'Rp ${_formatRupiah(amount)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.medanGreen,
                     ),
                   ),
                 ],
+              ),
+            ),
+            
+            const Spacer(),
+            
+            // Tombol Kembali ke Beranda
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.medanGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Selesai & Kembali ke Beranda',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
         ),
       ),
     );
-    
+  }
+
+  String _formatRupiah(double amount) {
+    return amount.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
   }
 }

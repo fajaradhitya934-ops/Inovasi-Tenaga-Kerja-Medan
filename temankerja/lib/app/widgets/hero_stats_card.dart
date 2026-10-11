@@ -1,19 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
 
-/// Kartu hijau di paling atas Beranda: sapaan + 3 angka kontribusi.
+/// Kartu hijau di paling atas Beranda: sapaan + 3 angka kontribusi realtime.
 class HeroStatsCard extends StatelessWidget {
   final String name;
-  final int kerjaSelesai;
-  final int proyekSosial;
-  final int poin;
 
   const HeroStatsCard({
     super.key,
     required this.name,
-    required this.kerjaSelesai,
-    required this.proyekSosial,
-    required this.poin,
   });
 
   static String _angka(int v) {
@@ -28,6 +24,8 @@ class HeroStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -72,20 +70,99 @@ class HeroStatsCard extends StatelessWidget {
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 16),
+
+          // Container Tampilan Realtime Stats
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0x26FFFFFF),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Row(
-              children: [
-                Expanded(child: _Stat(_angka(kerjaSelesai), 'Kerja Selesai')),
-                const _VDivider(),
-                Expanded(child: _Stat(_angka(proyekSosial), 'Proyek Sosial')),
-                const _VDivider(),
-                Expanded(child: _Stat(_angka(poin), 'Poin CP')),
-              ],
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: (user != null)
+                  ? FirebaseFirestore.instance
+                      .collection('job_offers')
+                      .snapshots()
+                  : null,
+              builder: (context, snapshot) {
+                int kerjaSelesaiCount = 0;
+                int lamaranMasukCount = 0;
+                int pekerjaanSekarangCount = 0;
+
+                if (user != null && snapshot.hasData) {
+                  final docs = snapshot.data!.docs;
+
+                  for (final doc in docs) {
+                    final data = doc.data();
+                    final postedByUid = data['postedByUid']?.toString() ?? '';
+                    final applicantUid = data['applicantUid']?.toString() ?? '';
+                    final workerId = data['workerId']?.toString() ?? '';
+                    final acceptedWorkerUid =
+                        data['acceptedWorkerUid']?.toString() ?? '';
+                    final status =
+                        (data['status'] ?? 'open').toString().toLowerCase();
+                    final progressStatus = (data['progressStatus'] ?? '')
+                        .toString()
+                        .toLowerCase();
+
+                    // 1. Kerja Selesai: Dokumen yang statusnya completed / done
+                    final bool isCompleted = status == 'completed' ||
+                        status == 'done' ||
+                        progressStatus == 'completed';
+                    final bool isMyJobAsWorkerOrOwner =
+                        postedByUid == user.uid ||
+                            workerId == user.uid ||
+                            applicantUid == user.uid;
+
+                    if (isCompleted && isMyJobAsWorkerOrOwner) {
+                      kerjaSelesaiCount++;
+                    }
+
+                    // 2. Lamaran Masuk: Diposting oleh user, ada pelamar, dan status masih pending/open
+                    final bool isMyJob = postedByUid == user.uid;
+                    final bool hasApplicant = applicantUid.isNotEmpty;
+                    final bool isPendingStatus = status == 'open' ||
+                        status == 'applied' ||
+                        status == 'pending';
+
+                    if (isMyJob && hasApplicant && isPendingStatus) {
+                      lamaranMasukCount++;
+                    }
+
+                    // 3. Pekerjaan Sekarang: Status in_progress atau accepted
+                    final bool isInProgress = status == 'in_progress' ||
+                        status == 'accepted' ||
+                        progressStatus == 'in_progress';
+                    final bool isWorkerInJob = workerId == user.uid ||
+                        acceptedWorkerUid == user.uid ||
+                        (applicantUid == user.uid && status == 'accepted');
+                    final bool isOwnerInJob = postedByUid == user.uid;
+
+                    if (isInProgress && (isWorkerInJob || isOwnerInJob)) {
+                      pekerjaanSekarangCount++;
+                    }
+                  }
+                }
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _Stat(_angka(kerjaSelesaiCount), 'Kerja Selesai'),
+                    ),
+                    const _VDivider(),
+                    Expanded(
+                      child: _Stat(_angka(lamaranMasukCount), 'Lamaran Masuk'),
+                    ),
+                    const _VDivider(),
+                    Expanded(
+                      child: _Stat(
+                        _angka(pekerjaanSekarangCount),
+                        'Pekerjaan Aktif',
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -115,6 +192,7 @@ class _Stat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white70, fontSize: 11),
         ),
       ],

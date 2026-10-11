@@ -1,9 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
 import 'package:inovasi_sumut/regar/core/utils/formatter.dart';
 
 class WalletCard extends StatelessWidget {
-  final int balance;
   final bool hidden;
   final VoidCallback onToggle;
   final VoidCallback onHistory;
@@ -11,7 +12,6 @@ class WalletCard extends StatelessWidget {
 
   const WalletCard({
     super.key,
-    required this.balance,
     required this.hidden,
     required this.onToggle,
     required this.onHistory,
@@ -20,6 +20,8 @@ class WalletCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -34,27 +36,47 @@ class WalletCard extends StatelessWidget {
             'Saldo Dompet Digital',
             style: TextStyle(color: Colors.white70, fontSize: 12),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  hidden ? 'Rp ••••••' : rupiah(balance),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
+          
+          // StreamBuilder untuk membaca saldo dari koleksi wallets secara Realtime
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: (user != null)
+                ? FirebaseFirestore.instance
+                    .collection('wallets')
+                    .doc(user.uid)
+                    .snapshots()
+                : null,
+            builder: (context, snapshot) {
+              int currentBalance = 0;
+
+              if (snapshot.hasData && snapshot.data?.data() != null) {
+                final data = snapshot.data!.data()!;
+                currentBalance = (data['balance'] as num?)?.toInt() ?? 0;
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      hidden ? 'Rp ••••••' : rupiah(currentBalance),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              IconButton(
-                onPressed: onToggle,
-                icon: Icon(
-                  hidden ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
+                  IconButton(
+                    onPressed: onToggle,
+                    icon: Icon(
+                      hidden ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
+          
           const SizedBox(height: 8),
           Row(
             children: [

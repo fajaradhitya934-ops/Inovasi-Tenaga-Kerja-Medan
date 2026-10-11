@@ -1,14 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:inovasi_sumut/regar/core/constant/kk_colors.dart';
 import 'package:inovasi_sumut/regar/data/models/job_model.dart';
-import 'package:inovasi_sumut/regar/data/repositories/job_repository.dart';
 import 'package:inovasi_sumut/regar/data/repositories/worker_repository.dart';
 import 'package:inovasi_sumut/regar/presentation/pages/detail_kerja_page.dart';
 import 'package:inovasi_sumut/regar/presentation/widgets/jobs/category_chips.dart';
 import 'package:inovasi_sumut/regar/presentation/widgets/jobs/job_card.dart';
 import 'package:inovasi_sumut/regar/presentation/widgets/jobs/job_search_bar.dart';
 
-/// Daftar semua lowongan + pencarian + filter.
 class CariKerjaPage extends StatefulWidget {
   const CariKerjaPage({super.key});
 
@@ -21,63 +21,14 @@ class _CariKerjaPageState extends State<CariKerjaPage> {
 
   final TextEditingController _search = TextEditingController();
 
-  List<JobModel> _jobs = [];
   String _category = _semua;
   JobType? _type;
   String _query = '';
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final jobs = await jobRepository.getJobs();
-      if (!mounted) return;
-      setState(() {
-        _jobs = jobs;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Gagal memuat lowongan. Coba lagi.';
-        _loading = false;
-      });
-    }
-  }
-
-  List<String> get _categories => [
-        _semua,
-        ...{for (final j in _jobs) j.category},
-      ];
-
-  List<JobModel> get _filtered {
-    final q = _query.trim().toLowerCase();
-    return _jobs.where((j) {
-      final okCategory = _category == _semua || j.category == _category;
-      final okType = _type == null || j.type == _type;
-      final okQuery = q.isEmpty ||
-          j.title.toLowerCase().contains(q) ||
-          j.company.toLowerCase().contains(q) ||
-          j.location.toLowerCase().contains(q) ||
-          j.category.toLowerCase().contains(q);
-      return okCategory && okType && okQuery;
-    }).toList();
   }
 
   void _openTypeFilter() {
@@ -137,108 +88,231 @@ class _CariKerjaPageState extends State<CariKerjaPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: KkColors.bg,
-      appBar: AppBar(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
         backgroundColor: KkColors.bg,
-        elevation: 0,
-        leading: const BackButton(color: KkColors.text),
-        title: const Text(
-          'Cari Kerja',
-          style: TextStyle(
-            color: KkColors.text,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
+        appBar: AppBar(
+          backgroundColor: KkColors.bg,
+          elevation: 0,
+          leading: const BackButton(color: KkColors.text),
+          title: const Text(
+            'Cari Kerja & Layanan',
+            style: TextStyle(
+              color: KkColors.text,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          bottom: const TabBar(
+            labelColor: KkColors.green,
+            unselectedLabelColor: KkColors.muted,
+            indicatorColor: KkColors.green,
+            indicatorWeight: 3,
+            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            tabs: [
+              Tab(text: 'Lowongan Kerja'),
+              Tab(text: 'Tawaran Jasa'),
+            ],
           ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        body: Column(
           children: [
-            JobSearchBar(
-              controller: _search,
-              onChanged: (v) => setState(() => _query = v),
-              onFilterTap: _openTypeFilter,
-              filterActive: _type != null,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: JobSearchBar(
+                controller: _search,
+                onChanged: (v) => setState(() => _query = v),
+                onFilterTap: _openTypeFilter,
+                filterActive: _type != null,
+              ),
             ),
-            const SizedBox(height: 12),
-            if (!_loading && _error == null) ...[
-              CategoryChips(
-                categories: _categories,
-                selected: _category,
-                onSelected: (c) => setState(() => _category = c),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // Lowongan Kerja: Mencari Pekerjaan yang Dibuka Klien ('job')
+                  _buildJobList(targetPostType: 'job'),
+                  // Tawaran Jasa: Mencari Pekerja Mandiri untuk Diajak Bekerja ('worker')
+                  _buildJobList(targetPostType: 'worker'),
+                ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Ditemukan ${_filtered.length} lowongan',
-                style: const TextStyle(fontSize: 12, color: KkColors.muted),
-              ),
-              const SizedBox(height: 8),
-            ],
-            Expanded(child: _buildBody()),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: KkColors.green),
-      );
-    }
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.wifi_off_rounded, size: 48, color: KkColors.muted),
-            const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: KkColors.muted)),
-            const SizedBox(height: 12),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: KkColors.green),
-              onPressed: _load,
-              child: const Text('Coba Lagi'),
+  Widget _buildJobList({required String targetPostType}) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('job_offers')
+          .where('status', isEqualTo: 'open')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Gagal memuat data: ${snapshot.error}',
+              style: const TextStyle(color: KkColors.muted),
             ),
-          ],
-        ),
-      );
-    }
-    final items = _filtered;
-    if (items.isEmpty) {
-      return const Center(
-        child: Text(
-          'Tidak ada lowongan yang cocok.\nCoba kata kunci atau filter lain.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: KkColors.muted),
-        ),
-      );
-    }
-    return RefreshIndicator(
-      color: KkColors.green,
-      onRefresh: _load,
-      child: ListenableBuilder(
-        listenable: workerRepository,
-        builder: (context, _) => ListView.builder(
-          itemCount: items.length,
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemBuilder: (context, i) {
-            final job = items[i];
-            return JobCard(
-              job: job,
-              applied: workerRepository.isApplied(job.id),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => DetailKerjaPage(job: job)),
-              ),
-            );
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: KkColors.green),
+          );
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        final filteredDocs = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final postType = (data['postType'] ?? '').toString().toLowerCase();
+          final postMode = (data['postMode'] ?? '').toString().toLowerCase();
+
+          if (targetPostType == 'job') {
+            return postType == 'job' ||
+                postType == 'job_vacancy' ||
+                postMode == 'hire_worker';
+          } else {
+            return postType == 'worker' ||
+                postType == 'worker_profile' ||
+                postMode == 'offer_service';
+          }
+        }).toList();
+
+        final allJobsWithDoc = filteredDocs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+
+          final companyName =
+              data['company'] ?? data['workerEmail'] ?? 'Pekerja Profesional';
+          final postedByUid = data['postedByUid'] ?? '';
+
+          final userEmail = currentUser?.email;
+
+          final bool isOwnJobByUid = currentUser != null &&
+              postedByUid.isNotEmpty &&
+              postedByUid == currentUser.uid;
+          final bool isOwnJobByEmail = userEmail != null &&
+              companyName.toString().toLowerCase() == userEmail.toLowerCase();
+
+          final bool isOwnJob = isOwnJobByUid || isOwnJobByEmail;
+
+          final initialJob = JobModel.fromMap(doc.id, data);
+
+          final job = JobModel(
+            id: initialJob.id,
+            title: initialJob.title,
+            company: (isOwnJob && userEmail != null)
+                ? userEmail
+                : initialJob.company,
+            location: initialJob.location,
+            category: initialJob.category,
+            salary: initialJob.salary,
+            description: initialJob.description,
+            type: initialJob.type,
+            isSkillExchangeable: initialJob.isSkillExchangeable,
+            requirements: initialJob.requirements,
+            postedAgo: initialJob.postedAgo,
+            phoneNumber: initialJob.phoneNumber,
+            acceptedPaymentType: initialJob.acceptedPaymentType,
+            postType: data['postType'] ?? targetPostType,
+          );
+
+          final String applicantUid = data['applicantUid'] ?? '';
+          final bool isAppliedInFirestore =
+              (currentUser != null && applicantUid == currentUser.uid);
+
+          return {
+            'job': job,
+            'isAppliedInFirestore': isAppliedInFirestore,
+            'isOwnJob': isOwnJob,
+          };
+        }).toList();
+
+        final categories = [
+          _semua,
+          ...{
+            for (final item in allJobsWithDoc)
+              (item['job'] as JobModel).category
           },
-        ),
-      ),
+        ];
+
+        final q = _query.trim().toLowerCase();
+        final filteredItems = allJobsWithDoc.where((item) {
+          final job = item['job'] as JobModel;
+          final okCategory =
+              _category == _semua || job.category == _category;
+          final okType = _type == null || job.type == _type;
+          final okQuery = q.isEmpty ||
+              job.title.toLowerCase().contains(q) ||
+              job.company.toLowerCase().contains(q) ||
+              job.location.toLowerCase().contains(q) ||
+              job.category.toLowerCase().contains(q);
+          return okCategory && okType && okQuery;
+        }).toList();
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              CategoryChips(
+                categories: categories,
+                selected: _category,
+                onSelected: (c) => setState(() => _category = c),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Ditemukan ${filteredItems.length} ${targetPostType == 'job' ? 'lowongan' : 'tawaran jasa'}',
+                style: const TextStyle(fontSize: 12, color: KkColors.muted),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: filteredItems.isEmpty
+                    ? Center(
+                        child: Text(
+                          targetPostType == 'job'
+                              ? 'Tidak ada lowongan kerja yang cocok.\nCoba kata kunci atau filter lain.'
+                              : 'Tidak ada tawaran jasa yang cocok.\nCoba kata kunci atau filter lain.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: KkColors.muted),
+                        ),
+                      )
+                    : ListenableBuilder(
+                        listenable: workerRepository,
+                        builder: (context, _) => ListView.builder(
+                          itemCount: filteredItems.length,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemBuilder: (context, i) {
+                            final job = filteredItems[i]['job'] as JobModel;
+                            final bool isAppliedInFirestore = filteredItems[i]
+                                ['isAppliedInFirestore'] as bool;
+
+                            final bool isApplied = isAppliedInFirestore ||
+                                workerRepository.isApplied(job.id);
+
+                            return JobCard(
+                              job: job,
+                              applied: isApplied,
+                              isWorkerOffer: targetPostType == 'worker',
+                              onTap: () {
+                                showDetailKerjaBottomSheet(context, job);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "727191947730",
+    "project_id": "inovasisumut",
+    "storage_bucket": "inovasisumut.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:727191947730:android:5cb2683d212d3fac7de00b",
+        "android_client_info": {
+          "package_name": "com.example.inovasi_sumut"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "727191947730-iag6279tei6vnhdct7fr1gvg1s1l5sdm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsK1Z6x_8DC6jxEbbSqmYCJALsU_6PF9E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "727191947730-iag6279tei6vnhdct7fr1gvg1s1l5sdm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
